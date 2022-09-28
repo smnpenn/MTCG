@@ -11,7 +11,8 @@
 
     public class Card
     {
-        private int damage;
+        //unterscheiden zwischen Monster/Spell
+        private readonly int damage;
         private string name;
         private ElementType element;
 

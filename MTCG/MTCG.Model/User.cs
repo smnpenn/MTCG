@@ -9,6 +9,6 @@ namespace MTCG.Model
     public class User
     {
         private Credentials credentials;
-
+        private int coins = 20;
     }
 }
