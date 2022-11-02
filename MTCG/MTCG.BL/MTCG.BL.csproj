@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MTCG.DAL\MTCG.DAL.csproj" />
+    <ProjectReference Include="..\MTCG.Model\MTCG.Model.csproj" />
+  </ItemGroup>
+
 </Project>
