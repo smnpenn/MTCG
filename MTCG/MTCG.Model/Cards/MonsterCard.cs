@@ -9,9 +9,8 @@ namespace MTCG.Model.Cards
     
     public class MonsterCard : Card
     {
-        public MonsterCard(string name, int damage, ElementType element, CardType type)
+        public MonsterCard(int damage, ElementType element, CardType type)
         {
-            this.name = name;
             this.damage = damage;
             this.element = element;
             this.type = type;

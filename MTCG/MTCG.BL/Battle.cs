@@ -1,15 +1,15 @@
 ﻿using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Reflection.Metadata;
-using MTCG.Model;
 using MTCG.Model.Cards;
+using MTCG.Model.Users;
 
 namespace MTCG.BL
 {
     public class Battle
     {
-        MTCG.Model.User player1;
-        MTCG.Model.User player2;
+        User player1;
+        User player2;
         Random random = new Random();
 
         public Battle(User player1, User player2)
@@ -21,10 +21,10 @@ namespace MTCG.BL
         public void executeBattle()
         {
             int count = 0;
-            while(player1.GetDeck().Count != 0 && player2.GetDeck().Count != 0 && count < 100)
+            while(player1.Deck.Count != 0 && player2.Deck.Count != 0 && count < 100)
             {
-                Card card1 = player1.GetDeck()[random.Next(0, player1.GetDeck().Count)];
-                Card card2 = player2.GetDeck()[random.Next(0, player2.GetDeck().Count)];
+                Card card1 = player1.Deck[random.Next(0, player1.Deck.Count)];
+                Card card2 = player2.Deck[random.Next(0, player2.Deck.Count)];
                 int result = compareCards(card1, card2);
 
                 if(result == 1)
@@ -44,9 +44,8 @@ namespace MTCG.BL
                 }
 
                 Console.WriteLine("\nRound " + count);
-                Console.WriteLine($"Player 1 Deck Count {player1.GetDeck().Count}");
-                Console.WriteLine($"Player 2 Deck Count {player2.GetDeck().Count}\n");
-                
+                Console.WriteLine($"Player 1 Deck Count {player1.Deck.Count}");
+                Console.WriteLine($"Player 2 Deck Count {player2.Deck.Count}\n");
 
                 ++count;
             }
@@ -57,7 +56,7 @@ namespace MTCG.BL
             double damageCard1 = card1.Damage * card1.CalcDamageMultiplier(card2);
             double damageCard2 = card2.Damage * card2.CalcDamageMultiplier(card1);
 
-            Console.WriteLine($"{card1.Name} ({card1.Damage}) vs {card2.Name} ({card2.Damage})");
+            Console.WriteLine($"{card1.Element}{card1.Type} ({card1.Damage}) vs {card2.Element}{card2.Type} ({card2.Damage})");
             Console.WriteLine($"Actual damage: {damageCard1} vs {damageCard2}");
             if (damageCard1 > damageCard2 || card1.isImmuneToMonster(card2.Type))
             {

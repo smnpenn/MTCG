@@ -8,9 +8,8 @@ namespace MTCG.Model.Cards
 {
     public class SpellCard : Card
     {
-        public SpellCard(string name, int damage, ElementType element)
+        public SpellCard(int damage, ElementType element)
         {
-            this.name = name;
             this.damage = damage;
             this.element = element;
             this.type = CardType.Spell;

@@ -13,4 +13,8 @@
     <ProjectReference Include="..\MTCG.Model\MTCG.Model.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="6.0.7" />
+  </ItemGroup>
+
 </Project>
