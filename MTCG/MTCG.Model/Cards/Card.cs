@@ -23,13 +23,11 @@
 
     public abstract class Card
     {
-        protected int damage;
-        protected string name;
+        protected float damage;
         protected ElementType element;
         protected CardType type;
 
-        public int Damage { get { return damage; } }
-        public string Name { get { return name; } }
+        public float Damage { get { return damage; } }
         public ElementType Element { get { return element; } }
         public CardType Type { get { return type; } }
 

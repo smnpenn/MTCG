@@ -1,37 +1,33 @@
 using MTCG.BL;
-using MTCG.Model;
 using MTCG.Model.Cards;
+using MTCG.Model.Users;
 
 namespace MTCG.UnitTest
 {
     [TestClass]
     public class UserTest
     {
-        Card goblin = new MonsterCard("FireGoblin", 10, ElementType.Fire, CardType.Goblin);
-        Card dragon = new MonsterCard("Dragon", 5, ElementType.Normal, CardType.Dragon);
-        Card wizard = new MonsterCard("WaterWizard", 25, ElementType.Water, CardType.Wizard);
-        Card ork = new MonsterCard("Ork", 20, ElementType.Normal, CardType.Ork);
-        Card knight = new MonsterCard("Knight", 20, ElementType.Normal, CardType.Knight);
-        Card elve = new MonsterCard("FireElve", 25, ElementType.Fire, CardType.Elve);
-        Card troll = new MonsterCard("WaterTroll", 30, ElementType.Water, CardType.Troll);
+        Card goblin = new MonsterCard(10, ElementType.Fire, CardType.Goblin);
+        Card dragon = new MonsterCard(5, ElementType.Normal, CardType.Dragon);
+        Card wizard = new MonsterCard(25, ElementType.Water, CardType.Wizard);
+        Card ork = new MonsterCard(20, ElementType.Normal, CardType.Ork);
+        Card knight = new MonsterCard(20, ElementType.Normal, CardType.Knight);
+        Card elve = new MonsterCard(25, ElementType.Fire, CardType.Elve);
+        Card troll = new MonsterCard(30, ElementType.Water, CardType.Troll);
 
-        Card waterSpell = new SpellCard("WaterSpell", 20, ElementType.Water);
-        Card fireSpell = new SpellCard("FireSpell", 20, ElementType.Fire);
-        Card normalSpell = new SpellCard("NormalSpell", 20, ElementType.Normal);
+        Card waterSpell = new SpellCard(20, ElementType.Water);
+        Card fireSpell = new SpellCard(20, ElementType.Fire);
+        Card normalSpell = new SpellCard(20, ElementType.Normal);
 
         public Battle instantiateBattle()
         {
-            Credentials credentials1 = new Credentials();
-            credentials1.Username = "Simon";
-            credentials1.Password = "123";
+            UserCredentials credentials1 = new UserCredentials("Simon", "123");
             User user1 = new User(credentials1);
 
-            Credentials credentials2 = new Credentials();
-            credentials2.Username = "Max";
-            credentials2.Password = "123";
+            UserCredentials credentials2 = new UserCredentials("Max", "123");
             User user2 = new User(credentials2);
 
-            BL.Battle battle = new BL.Battle(user1, user2);
+            BL.Battle battle = new Battle(user1, user2);
 
             return battle;
         }
@@ -89,12 +85,10 @@ namespace MTCG.UnitTest
         public void TestGetCredentials()
         {
             //useless test
-            MTCG.Model.Credentials credentials = new Credentials();
-            credentials.Username = "Simon";
-            credentials.Password = "123";
-            MTCG.Model.User user = new User(credentials);
+            UserCredentials credentials = new UserCredentials("Simon", "123");
+            User user = new User(credentials);
 
-            string res = user.GetUsername();
+            string res = user.Credentials.Username;
             Assert.AreEqual(res, "Simon");
         }
     }
