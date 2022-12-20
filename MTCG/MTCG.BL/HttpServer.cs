@@ -51,9 +51,21 @@ namespace MTCG.BL
                         {
                             if (strParams.Length > 1)
                             {
-                                //response.ResponseString = $"Retrieves the user data for the given username ({strParams[1]})";
-                                User user = db.GetUserByID(strParams[1]);
-                                response.ResponseString = JsonSerializer.Serialize(user.Data);
+                                //Retrieves the user data for the given username;
+                                UserData userData = db.GetUserByID(strParams[1]);
+                                if(userData != null)
+                                {
+                                    response.ResponseCode = 200;
+                                    response.ResponseCodeText = "OK";
+                                    response.ResponseString = JsonSerializer.Serialize(userData);
+                                }
+                                else
+                                {
+                                    response.ResponseCode = 404;
+                                    response.ResponseCodeText = "Not Found";
+                                    response.ResponseString = "User not found";
+                                }
+                                
                             }
                         }
                         else if (strParams[0] == "cards")
@@ -89,6 +101,7 @@ namespace MTCG.BL
                         }
                         else if (strParams[0] == "sessions")
                         {
+                            int authToken = db.LoginUser(request.Params["username"], request.Params["password"]);
                             response.ResponseString = "Login with existing user";
                         }
                         else if (strParams[0] == "packages")
@@ -160,7 +173,8 @@ namespace MTCG.BL
                     }
 
                     response.Send();
-
+                    writer.Close();
+                    reader.Close();
                 });
 
             }

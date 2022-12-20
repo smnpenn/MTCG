@@ -40,19 +40,12 @@ namespace MTCG.BL
         {
             writer = new StreamWriter(socket.GetStream()) { AutoFlush = true };
 
-            //byte[] buffer = Encoding.UTF8.GetBytes(ResponseString);
-
-            //response.ContentLength64 = buffer.Length;
-            //Stream output = response.OutputStream;
-            //output.Write(buffer, 0, buffer.Length);
-            //output.Close();
             writer.WriteLine("HTTP/1.1 " + ResponseCode + " " + ResponseCodeText);
             writer.WriteLine("Content-Length: " + ResponseString.Length);
             writer.WriteLine("Content-Type: text/plain");
             writer.WriteLine();
             writer.WriteLine(ResponseString);
             writer.Flush();
-            //writer.Close();
         }
     }
 }
