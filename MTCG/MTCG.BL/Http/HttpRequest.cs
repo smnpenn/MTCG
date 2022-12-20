@@ -74,10 +74,6 @@ namespace MTCG.BL.Http
 
             Params = new Dictionary<string, string>();
 
-            while((line=reader.ReadLine()) != null)
-            {
-                Console.WriteLine(line);
-            }
 
             //if (reader.ReadLine() == "{")
             //{
