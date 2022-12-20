@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MTCG.BL
+namespace MTCG.BL.Http
 {
     internal class HttpResponse
     {
@@ -38,14 +38,16 @@ namespace MTCG.BL
 
         public void Send()
         {
-            writer = new StreamWriter(socket.GetStream()) { AutoFlush = true };
 
             writer.WriteLine("HTTP/1.1 " + ResponseCode + " " + ResponseCodeText);
             writer.WriteLine("Content-Length: " + ResponseString.Length);
             writer.WriteLine("Content-Type: text/plain");
             writer.WriteLine();
             writer.WriteLine(ResponseString);
+
+            //writer.Close();
             writer.Flush();
+
         }
     }
 }

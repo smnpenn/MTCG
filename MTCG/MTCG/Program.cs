@@ -1,6 +1,6 @@
 ﻿
 using MTCG;
-using MTCG.BL;
+using MTCG.BL.Http;
 using MTCG.DAL;
 using MTCG.Model;
 using MTCG.Model.Cards;

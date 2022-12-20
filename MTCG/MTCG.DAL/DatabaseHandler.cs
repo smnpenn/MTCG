@@ -36,60 +36,71 @@ namespace MTCG.DAL
         public void Connect()
         {
             string config = AppDomain.CurrentDomain.BaseDirectory + "/ressources/dbConfig.json";
-
-            if (File.Exists(config))
+            try
             {
-                var pConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(config));
-                if (pConfig == null || pConfig["host"] == null || pConfig["username"] == null || pConfig["password"] == null || pConfig["database"] == null)
+                if (File.Exists(config))
                 {
-                    throw new IOException("DbConfig is invalid");
+                    var pConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(config));
+                    if (pConfig == null || pConfig["host"] == null || pConfig["username"] == null || pConfig["password"] == null || pConfig["database"] == null)
+                    {
+                        throw new IOException("DbConfig is invalid");
+                    }
+
+                    string cs = $"Host={pConfig["host"]};Username={pConfig["username"]};Password={pConfig["password"]};Database={pConfig["database"]}";
+                    connection = new NpgsqlConnection(cs);
+                    connection.Open();
+
+                    Console.WriteLine("Database connection established!");
                 }
-
-                string cs = $"Host={pConfig["host"]};Username={pConfig["username"]};Password={pConfig["password"]};Database={pConfig["database"]}";
-                connection = new NpgsqlConnection(cs);
-                connection.Open();
-
-                Console.WriteLine("Database connection established!"); 
+                else
+                {
+                    Console.WriteLine("Database config is missing!");
+                    System.Environment.Exit(-1);
+                }
             }
-            else
+            catch (NpgsqlException)
             {
-                Console.WriteLine("Database config is missing!");
+                Console.WriteLine("Failed to connect to Database");
                 System.Environment.Exit(-1);
             }
+            
         }
 
         public UserData GetUserByID(string username)
         {
-            if(connection != null)
+            lock (padlock)
             {
-                //var sql = $"SELECT uc.username, uc.password, ud.bio, ud.image, us.elo, us.wins, us.losses FROM mtcg.\"UserCredentials\" uc, mtcg.\"UserData\" ud, mtcg.\"UserStats\" us WHERE uc.username = \'?\' AND ud.username = uc.username AND us.username = uc.username";
-                NpgsqlCommand cmd = new NpgsqlCommand("SELECT bio, image, username FROM mtcg.\"UserData\" WHERE username = @p1;", connection);
-                cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
-                cmd.Prepare();
-                cmd.Parameters["p1"].Value = username;
-
-                NpgsqlDataReader dr = cmd.ExecuteReader();
-                if (dr.Read())
+                if (connection != null)
                 {
-                    UserData ud = new UserData();
-                    ud.Bio = (string)dr[0];
-                    ud.Image = (string)dr[1];
-                    ud.Name = (string)dr[2];
+                    //var sql = $"SELECT uc.username, uc.password, ud.bio, ud.image, us.elo, us.wins, us.losses FROM mtcg.\"UserCredentials\" uc, mtcg.\"UserData\" ud, mtcg.\"UserStats\" us WHERE uc.username = \'?\' AND ud.username = uc.username AND us.username = uc.username";
+                    NpgsqlCommand cmd = new NpgsqlCommand("SELECT bio, image, username FROM mtcg.\"UserData\" WHERE username = @p1;", connection);
+                    cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                    cmd.Prepare();
+                    cmd.Parameters["p1"].Value = username;
 
-                    dr.Close();
-                    return ud;
+                    NpgsqlDataReader dr = cmd.ExecuteReader();
+                    if (dr.Read())
+                    {
+                        UserData ud = new UserData();
+                        ud.Bio = (string)dr[0];
+                        ud.Image = (string)dr[1];
+                        ud.Name = (string)dr[2];
+
+                        dr.Close();
+                        return ud;
+                    }
+                    else
+                    {
+                        dr.Close();
+                        return null;
+                    }
+
                 }
                 else
                 {
-                    dr.Close();
+                    Console.WriteLine("Database not connected!");
                     return null;
                 }
-                
-            }
-            else
-            {
-                Console.WriteLine("Database not connected!");
-                return null;
             }
         }
 
@@ -103,7 +114,7 @@ namespace MTCG.DAL
 
             if(connection != null)
             {
-                NpgsqlCommand cmd = new NpgsqlCommand("SELECT password FROM mtcg.\"UserData\" WHERE username = @p1;", connection);
+                NpgsqlCommand cmd = new NpgsqlCommand("SELECT password FROM mtcg.\"UserCredentials\" WHERE username = @p1;", connection);
                 cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
                 cmd.Prepare();
                 cmd.Parameters["p1"].Value = username;
