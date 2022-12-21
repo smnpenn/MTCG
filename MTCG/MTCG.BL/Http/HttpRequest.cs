@@ -70,20 +70,18 @@ namespace MTCG.BL.Http
                     throw new HttpRequestException("Incorrect Content-Type");
                 }
             }
-            
+
 
             Params = new Dictionary<string, string>();
 
-
-            //if (reader.ReadLine() == "{")
-            //{
-            //   while ((line = reader.ReadLine()).Trim() != "}")
-            //   {
-            //        string[] parts = line.Split(": ");
-            //        Params[parts[0].Trim(new char[] { ' ', '"' })] = parts[1].Trim(new char[] { '"', ',', ' ' });
-            //   }
-            //}
-            Console.WriteLine("Test");
+            if (reader.ReadLine() == "{")
+            {
+                while ((line = reader.ReadLine()) != "}")
+                {
+                    string[] parts = line.Split(": ");
+                    Params[parts[0].Trim(new char[] { ' ', '"' })] = parts[1].Trim(new char[] { '"', ',', ' ' });
+                }
+            }
         }
     }
 }
