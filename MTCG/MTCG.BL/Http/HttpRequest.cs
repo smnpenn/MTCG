@@ -1,8 +1,11 @@
-﻿using Npgsql.Internal.TypeHandlers.GeometricHandlers;
+﻿using Newtonsoft.Json;
+using Npgsql.Internal.TypeHandlers.GeometricHandlers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Sockets;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -71,16 +74,31 @@ namespace MTCG.BL.Http
                 }
             }
 
-
-            Params = new Dictionary<string, string>();
-
-            if (reader.ReadLine() == "{")
+            var data = new StringBuilder(200);
+            char[] buffer = new char[1024];
+            int bytesReadTotal = 0;
+            while (bytesReadTotal < Int16.Parse(Headers["Content-Length"]))
             {
-                while ((line = reader.ReadLine()) != "}")
+                try
                 {
-                    string[] parts = line.Split(": ");
-                    Params[parts[0].Trim(new char[] { ' ', '"' })] = parts[1].Trim(new char[] { '"', ',', ' ' });
+                    var bytesRead = reader.Read(buffer, 0, 1024);
+                    bytesReadTotal += bytesRead;
+                    if (bytesRead == 0) break;
+                    data.Append(buffer, 0, bytesRead);
                 }
+                catch (IOException) 
+                { 
+                    break; 
+                }
+            }
+            Params = new Dictionary<string, string>();
+            try
+            {
+                Params = JsonConvert.DeserializeObject<Dictionary<string, string>>(data.ToString());
+            }
+            catch (JsonReaderException ex)
+            {
+                throw ex;
             }
         }
     }

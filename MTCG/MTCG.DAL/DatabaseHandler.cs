@@ -119,6 +119,7 @@ namespace MTCG.DAL
                 cmd.Prepare();
                 cmd.Parameters["p1"].Value = username;
 
+                //TODO: Npgsql.NpgsqlOperationInProgressException
                 NpgsqlDataReader dr = cmd.ExecuteReader();
                 if (dr.Read())
                 {

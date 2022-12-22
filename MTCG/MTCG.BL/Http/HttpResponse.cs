@@ -12,7 +12,7 @@ namespace MTCG.BL.Http
         private TcpClient socket;
         private StreamWriter writer;
 
-        public string ResponseString
+        public string ResponseBody
         {
             get;
             set;
@@ -40,10 +40,10 @@ namespace MTCG.BL.Http
         {
 
             writer.WriteLine("HTTP/1.1 " + ResponseCode + " " + ResponseCodeText);
-            writer.WriteLine("Content-Length: " + ResponseString.Length);
-            writer.WriteLine("Content-Type: text/plain");
+            writer.WriteLine("Content-Length: " + ResponseBody.Length);
+            writer.WriteLine("Content-Type: application/json");
             writer.WriteLine();
-            writer.WriteLine(ResponseString);
+            writer.WriteLine(ResponseBody);
 
             //writer.Close();
             writer.Flush();
