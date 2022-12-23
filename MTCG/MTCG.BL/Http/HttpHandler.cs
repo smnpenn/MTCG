@@ -2,6 +2,8 @@
 using MTCG.Model.Cards;
 using MTCG.Model.Users;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Schema;
 using System.Net.Sockets;
 using System.Text.Json;
 
@@ -9,9 +11,19 @@ namespace MTCG.BL.Http
 {
     public class HttpHandler
     {
+        private JsonSchema UserCredentialsSchema = new JsonSchema();
+
         DatabaseHandler db = DatabaseHandler.Instance;
         public HttpHandler()
         {
+            UserCredentialsSchema.Type = JsonSchemaType.Object;
+            UserCredentialsSchema.Description = "UserCredentials";
+            UserCredentialsSchema.Properties = new Dictionary<string, JsonSchema>
+            {
+                { "username", new JsonSchema { Type = JsonSchemaType.String } },
+                { "password", new JsonSchema { Type = JsonSchemaType.String } }
+            };
+
             db.Connect();
         }
 
@@ -22,6 +34,10 @@ namespace MTCG.BL.Http
                 StreamReader reader = new StreamReader(socket.GetStream());
                 HttpRequest request = new HttpRequest(socket, reader);
                 string[] strParams = request.UrlSegments;
+                if (request.Headers.ContainsKey("Authorization"))
+                {
+                    db.Token = request.Headers["Authorization"];
+                }
 
                 if (request.HttpMethod == "GET")
                 {
@@ -31,17 +47,27 @@ namespace MTCG.BL.Http
                     {
                         if (strParams.Length > 1)
                         {
-                            //Retrieves the user data for the given username;
-                            UserData userData = db.GetUserByID(strParams[1]);
-                            if (userData != null)
+                            if (db.AuthorizeToken(strParams[1]))
                             {
-                                SendResponse(socket, 200, "OK", System.Text.Json.JsonSerializer.Serialize(userData));
+                                //Retrieves the user data for the given username;
+                                UserData userData = db.GetUserByID(strParams[1]);
+                                if (userData != null)
+                                {
+                                    SendResponse(socket, 200, "OK", System.Text.Json.JsonSerializer.Serialize(userData));
+                                }
+                                else
+                                {
+                                    SendResponse(socket, 404, "Not found", "User not found");
+                                }
                             }
                             else
                             {
-                                SendResponse(socket, 404, "Not found", "User not found");
+                                SendUnauthorizedError(socket);
                             }
-
+                        }
+                        else
+                        {
+                            SendBadRequest(socket);
                         }
                     }
                     else if (strParams[0] == "cards")
@@ -73,14 +99,47 @@ namespace MTCG.BL.Http
 
                     if (strParams[0] == "users")
                     {
-                        SendResponse(socket, 200, "OK", "Register a new user");
+                        //Register a new user
+                        //TODO: Add JSONSchemas for RequestBodys und ResponseBodys
+                        JObject body = JObject.Parse(request.RequestBodyString);
+
+                        if (body.IsValid(UserCredentialsSchema))
+                        {
+                            Console.WriteLine("Correct BODY");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Incorrect Body");
+                        }
+                        
+                        if (request.Params.ContainsKey("username") && request.Params.ContainsKey("password"))
+                        {
+                            int code = db.RegisterUser(request.Params["username"], request.Params["password"]);
+                            if (code == 0)
+                            {
+                                SendResponse(socket, 201, "OK", "User successfully created");
+                            }
+                            else if(code == 1)
+                            {
+                                SendResponse(socket, 409, "Conflict", "User with same username already registered");
+                            }
+                            else
+                            {
+                                SendBadRequest(socket);
+                            }
+
+                        }
+                        else
+                        {
+                            SendBadRequest(socket);
+                        }
                     }
                     else if (strParams[0] == "sessions")
                     {
                         if (request.Params.ContainsKey("username") && request.Params.ContainsKey("password"))
                         {
-                            int authToken = db.LoginUser(request.Params["username"], request.Params["password"]);
-                            if (authToken != 0)
+                            string authToken = db.LoginUser(request.Params["username"], request.Params["password"]);
+                            if (authToken != null)
                             {
                                 SendResponse(socket, 200, "OK", "{\"authToken\":\"" + authToken.ToString() + "\"}");
                             }
@@ -91,7 +150,7 @@ namespace MTCG.BL.Http
                         }
                         else
                         {
-                            SendResponse(socket, 400, "Bad Request", "400 Bad Request");
+                            SendBadRequest(socket, "400 Bad Request");
                         }
                     }
                     else if (strParams[0] == "packages")
@@ -164,9 +223,13 @@ namespace MTCG.BL.Http
 
                 reader.Close();
             }
-            catch (JsonReaderException)
+            catch (JsonReaderException ex)
             {
-                SendResponse(socket, 400, "Bad Request", "400 Bad Request");
+                SendBadRequest(socket, ex.Message);
+            }
+            catch(HttpRequestException ex)
+            {
+                SendBadRequest(socket, ex.Message);
             }
         }
 
@@ -181,6 +244,30 @@ namespace MTCG.BL.Http
             response.Send();
             writer.Close();
 
+        }
+
+        public void SendBadRequest(TcpClient socket, string message = "400 Bad Request")
+        {
+            StreamWriter writer = new StreamWriter(socket.GetStream()) { AutoFlush = true };
+            HttpResponse response = new HttpResponse(socket, writer);
+            response.ResponseCode = 400;
+            response.ResponseCodeText = "Bad Request";
+            response.ResponseBody = message;
+
+            response.Send();
+            writer.Close();
+        }
+
+        public void SendUnauthorizedError(TcpClient socket)
+        {
+            StreamWriter writer = new StreamWriter(socket.GetStream()) { AutoFlush = true };
+            HttpResponse response = new HttpResponse(socket, writer);
+            response.ResponseCode = 401;
+            response.ResponseCodeText = "Unauthorized";
+            response.ResponseBody = "Access token is missing or invalid";
+
+            response.Send();
+            writer.Close();
         }
     }
 }

@@ -47,6 +47,12 @@ namespace MTCG.BL.Http
             private set;
         }
 
+        public string RequestBodyString
+        {
+            get;
+            private set;
+        }
+
         private StreamReader reader;
 
         public HttpRequest(TcpClient socket, StreamReader reader)
@@ -66,40 +72,42 @@ namespace MTCG.BL.Http
                 Headers[parts[0]] = parts[1];
             }
 
-            if (Headers.ContainsKey("Content-Type"))
+            //get Request Body Params
+            if (Headers.ContainsKey("Content-Length") && Headers.ContainsKey("Content-Type"))
             {
                 if (Headers["Content-Type"] != "application/json")
                 {
                     throw new HttpRequestException("Incorrect Content-Type");
                 }
-            }
-
-            var data = new StringBuilder(200);
-            char[] buffer = new char[1024];
-            int bytesReadTotal = 0;
-            while (bytesReadTotal < Int16.Parse(Headers["Content-Length"]))
-            {
+                var data = new StringBuilder(200);
+                char[] buffer = new char[1024];
+                int bytesReadTotal = 0;
+                while (bytesReadTotal < Int16.Parse(Headers["Content-Length"]))
+                {
+                    try
+                    {
+                        var bytesRead = reader.Read(buffer, 0, 1024);
+                        bytesReadTotal += bytesRead;
+                        if (bytesRead == 0) break;
+                        data.Append(buffer, 0, bytesRead);
+                    }
+                    catch (IOException)
+                    {
+                        break;
+                    }
+                }
+                RequestBodyString = data.ToString();
+                Params = new Dictionary<string, string>();
                 try
                 {
-                    var bytesRead = reader.Read(buffer, 0, 1024);
-                    bytesReadTotal += bytesRead;
-                    if (bytesRead == 0) break;
-                    data.Append(buffer, 0, bytesRead);
+                    Params = JsonConvert.DeserializeObject<Dictionary<string, string>>(data.ToString());
                 }
-                catch (IOException) 
-                { 
-                    break; 
+                catch (JsonReaderException)
+                {
+                    throw new JsonReaderException("Invalid Json-Format");
                 }
             }
-            Params = new Dictionary<string, string>();
-            try
-            {
-                Params = JsonConvert.DeserializeObject<Dictionary<string, string>>(data.ToString());
-            }
-            catch (JsonReaderException ex)
-            {
-                throw ex;
-            }
+            
         }
     }
 }

@@ -9,13 +9,14 @@ using Npgsql;
 using NpgsqlTypes;
 using Newtonsoft.Json;
 using System.Diagnostics.Metrics;
+using System.Runtime.CompilerServices;
 
 namespace MTCG.DAL
 {
     public class DatabaseHandler
     {
         NpgsqlConnection connection;
-        
+
         private static DatabaseHandler instance = null;
         private static readonly object padlock = new object();
 
@@ -33,6 +34,8 @@ namespace MTCG.DAL
                 }
             }
         }
+
+        public string Token = null;
         public void Connect()
         {
             string config = AppDomain.CurrentDomain.BaseDirectory + "/ressources/dbConfig.json";
@@ -63,7 +66,7 @@ namespace MTCG.DAL
                 Console.WriteLine("Failed to connect to Database");
                 System.Environment.Exit(-1);
             }
-            
+
         }
 
         public UserData GetUserByID(string username)
@@ -72,7 +75,6 @@ namespace MTCG.DAL
             {
                 if (connection != null)
                 {
-                    //var sql = $"SELECT uc.username, uc.password, ud.bio, ud.image, us.elo, us.wins, us.losses FROM mtcg.\"UserCredentials\" uc, mtcg.\"UserData\" ud, mtcg.\"UserStats\" us WHERE uc.username = \'?\' AND ud.username = uc.username AND us.username = uc.username";
                     NpgsqlCommand cmd = new NpgsqlCommand("SELECT bio, image, username FROM mtcg.\"UserData\" WHERE username = @p1;", connection);
                     cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
                     cmd.Prepare();
@@ -82,8 +84,24 @@ namespace MTCG.DAL
                     if (dr.Read())
                     {
                         UserData ud = new UserData();
-                        ud.Bio = (string)dr[0];
-                        ud.Image = (string)dr[1];
+                        if (dr.IsDBNull(0))
+                        {
+                            ud.Bio = null;
+                        }
+                        else
+                        {
+                            ud.Bio = (string)dr[0];
+                        }
+
+                        if (dr.IsDBNull(1))
+                        {
+                            ud.Image = null;
+                        }
+                        else
+                        {
+                            ud.Image = (string)dr[1];
+                        }
+                        
                         ud.Name = (string)dr[2];
 
                         dr.Close();
@@ -94,7 +112,6 @@ namespace MTCG.DAL
                         dr.Close();
                         return null;
                     }
-
                 }
                 else
                 {
@@ -104,44 +121,99 @@ namespace MTCG.DAL
             }
         }
 
-        public int LoginUser(string username, string password)
+        public string LoginUser(string username, string password)
         {
-            if(username == null || password == null)
+            if (username == null || password == null)
             {
                 Console.WriteLine("Invalid parameters");
-                return 0;
+                return null;
             }
 
-            if(connection != null)
+            lock (padlock)
             {
-                NpgsqlCommand cmd = new NpgsqlCommand("SELECT password FROM mtcg.\"UserCredentials\" WHERE username = @p1;", connection);
-                cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
-                cmd.Prepare();
-                cmd.Parameters["p1"].Value = username;
-
-                //TODO: Npgsql.NpgsqlOperationInProgressException
-                NpgsqlDataReader dr = cmd.ExecuteReader();
-                if (dr.Read())
+                if (connection != null)
                 {
-                    if(password == (string)dr[0])
+                    NpgsqlCommand cmd = new NpgsqlCommand("SELECT password FROM mtcg.\"UserCredentials\" WHERE username = @p1;", connection);
+                    cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                    cmd.Prepare();
+                    cmd.Parameters["p1"].Value = username;
+
+                    //TODO: Npgsql.NpgsqlOperationInProgressException
+                    NpgsqlDataReader dr = cmd.ExecuteReader();
+                    if (dr.Read())
                     {
-                        Console.WriteLine("Login successful");
-                        string usernameWithSalt = username + GetRandomSalt(5);
-                        int token = usernameWithSalt.GetHashCode();
-                        return token;
+                        if (password == (string)dr[0])
+                        {
+                            Console.WriteLine("Login successful");
+                            string usernameWithSalt = username + GetRandomSalt(5);
+                            string token = usernameWithSalt.GetHashCode().ToString();
+                            dr.Close();
+                            insertNewToken(username, token);
+                            return token;
+                        }
+                        else
+                        {
+                            dr.Close();
+                            Console.WriteLine("Incorrect password");
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("Incorrect password");
+                        dr.Close();
+                        Console.WriteLine("No such user!");
+                    }
+                }
+                return null;
+            }
+        }
+
+        public int RegisterUser(string username, string password)
+        {
+            if (username == null || password == null)
+            {
+                Console.WriteLine("Invalid parameters");
+                return -1;
+            }
+
+            lock (padlock)
+            {
+                if (connection != null)
+                {
+                    try
+                    {
+                        NpgsqlCommand cmd = new NpgsqlCommand("INSERT INTO mtcg.\"UserCredentials\"(username, password) VALUES(@p1, @p2);", connection);
+                        cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                        cmd.Parameters.Add(new NpgsqlParameter("p2", DbType.String));
+                        cmd.Prepare();
+                        cmd.Parameters["p1"].Value = username;
+                        cmd.Parameters["p2"].Value = password;
+
+                        NpgsqlCommand cmd2 = new NpgsqlCommand("INSERT INTO mtcg.\"UserData\"(username, bio, image) VALUES(@p1, null, null);", connection);
+                        cmd2.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                        cmd2.Prepare();
+                        cmd2.Parameters["p1"].Value = username;
+
+                        NpgsqlCommand cmd3 = new NpgsqlCommand("INSERT INTO mtcg.\"UserStats\"(username, elo, wins, losses) VALUES(@p1, 0, 0, 0);", connection);
+                        cmd3.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                        cmd3.Prepare();
+                        cmd3.Parameters["p1"].Value = username;
+
+                        cmd.ExecuteNonQuery();
+                        cmd2.ExecuteNonQuery();
+                        cmd3.ExecuteNonQuery();
+
+                        return 0;
+                    }
+                    catch (PostgresException ex)
+                    {
+                        return 1;
                     }
                 }
                 else
                 {
-                    dr.Close();
-                    Console.WriteLine("No such user!");
+                    return -1;
                 }
             }
-            return 0;
         }
 
         private string GetRandomSalt(int length)
@@ -158,6 +230,64 @@ namespace MTCG.DAL
                 sb.Append(letter);
             }
             return sb.ToString();
+        }
+
+        public bool AuthorizeToken(string username)
+        {
+            if (Token == null)
+            {
+                return false;
+            }
+            //TODO: Introduce admin user
+            NpgsqlCommand cmd = new NpgsqlCommand("SELECT token FROM mtcg.\"UserCredentials\" WHERE username = @p1;", connection);
+            cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+            cmd.Prepare();
+            cmd.Parameters["p1"].Value = username;
+
+            NpgsqlDataReader dr = cmd.ExecuteReader();
+            if (dr.Read())
+            {
+                if (dr.IsDBNull(0))
+                {
+                    dr.Close();
+                    return false;
+                }
+
+                if ((string)dr[0] == Token)
+                {
+                    dr.Close();
+                    return true;
+                }
+                else
+                {
+                    dr.Close();
+                    return false;
+                }
+            }
+            else
+            {
+                dr.Close();
+                return false;
+            }
+        }
+
+        private void insertNewToken(string username, string token)
+        {
+            try
+            {
+                NpgsqlCommand cmd = new NpgsqlCommand("UPDATE mtcg.\"UserCredentials\" SET token = @p1 WHERE username = @p2;", connection);
+                cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                cmd.Parameters.Add(new NpgsqlParameter("p2", DbType.String));
+                cmd.Prepare();
+                cmd.Parameters["p1"].Value = token;
+                cmd.Parameters["p2"].Value = username;
+
+                cmd.ExecuteNonQuery();
+            }
+            catch (PostgresException ex)
+            {
+                Console.WriteLine("Could not insert token, user does not exist");
+            }
         }
     }
 }
