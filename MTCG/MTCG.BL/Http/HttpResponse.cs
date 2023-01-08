@@ -30,6 +30,12 @@ namespace MTCG.BL.Http
             set;
         }
 
+        public string ContentType
+        {
+            get;
+            set;
+        }
+
         public HttpResponse(TcpClient socket, StreamWriter writer)
         {
             this.socket = socket;
@@ -41,7 +47,7 @@ namespace MTCG.BL.Http
 
             writer.WriteLine("HTTP/1.1 " + ResponseCode + " " + ResponseCodeText);
             writer.WriteLine("Content-Length: " + ResponseBody.Length);
-            writer.WriteLine("Content-Type: application/json");
+            writer.WriteLine("Content-Type: " + ContentType);
             writer.WriteLine();
             writer.WriteLine(ResponseBody);
 

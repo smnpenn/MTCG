@@ -1,4 +1,4 @@
-using MTCG.BL;
+using MTCG.BL.Battle;
 using MTCG.Model.Cards;
 using MTCG.Model.Users;
 
@@ -27,7 +27,7 @@ namespace MTCG.UnitTest
             UserCredentials credentials2 = new UserCredentials("Max", "123");
             User user2 = new User(credentials2);
 
-            BL.Battle battle = new Battle(user1, user2);
+            Battle battle = new Battle(user1, user2);
 
             return battle;
         }

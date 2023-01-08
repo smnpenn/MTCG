@@ -8,7 +8,7 @@ namespace MTCG.Model.Cards
 {
     public class SpellCard : Card
     {
-        public SpellCard(int damage, ElementType element)
+        public SpellCard(double damage, ElementType element)
         {
             this.damage = damage;
             this.element = element;
@@ -48,6 +48,11 @@ namespace MTCG.Model.Cards
         public override bool isImmuneToMonster(CardType opponentType)
         {
             return false;
+        }
+
+        public override string ToString()
+        {
+            return "Type: " + type + "; Element: " + element + "; Damage: " + damage + "\n";
         }
     }
 }

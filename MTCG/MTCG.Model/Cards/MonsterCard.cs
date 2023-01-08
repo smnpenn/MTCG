@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace MTCG.Model.Cards
 {
     
     public class MonsterCard : Card
     {
-        public MonsterCard(int damage, ElementType element, CardType type)
+        public MonsterCard(double damage, ElementType element, CardType type)
         {
             this.damage = damage;
             this.element = element;
@@ -69,6 +70,10 @@ namespace MTCG.Model.Cards
             }
 
             return false;
+        }
+        public override string ToString()
+        {
+            return "Type: " + type + "; Element: " + element + "; Damage: " + damage + "\n";
         }
     }
 }

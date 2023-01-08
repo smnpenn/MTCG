@@ -1,29 +1,21 @@
-﻿using MTCG.DAL;
+﻿using MTCG.BL.Battle;
+using MTCG.DAL;
 using MTCG.Model.Cards;
 using MTCG.Model.Users;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Schema;
+using Npgsql;
 using System.Net.Sockets;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MTCG.BL.Http
 {
     public class HttpHandler
     {
-        private JsonSchema UserCredentialsSchema = new JsonSchema();
 
         DatabaseHandler db = DatabaseHandler.Instance;
         public HttpHandler()
         {
-            UserCredentialsSchema.Type = JsonSchemaType.Object;
-            UserCredentialsSchema.Description = "UserCredentials";
-            UserCredentialsSchema.Properties = new Dictionary<string, JsonSchema>
-            {
-                { "username", new JsonSchema { Type = JsonSchemaType.String } },
-                { "password", new JsonSchema { Type = JsonSchemaType.String } }
-            };
-
             db.Connect();
         }
 
@@ -47,10 +39,10 @@ namespace MTCG.BL.Http
                     {
                         if (strParams.Length > 1)
                         {
-                            if (db.AuthorizeToken(strParams[1]))
+                            if (db.AuthorizeToken())
                             {
                                 //Retrieves the user data for the given username;
-                                UserData userData = db.GetUserByID(strParams[1]);
+                                UserData? userData = db.GetUserByID(strParams[1]);
                                 if (userData != null)
                                 {
                                     SendResponse(socket, 200, "OK", System.Text.Json.JsonSerializer.Serialize(userData));
@@ -72,11 +64,73 @@ namespace MTCG.BL.Http
                     }
                     else if (strParams[0] == "cards")
                     {
-                        SendResponse(socket, 200, "OK", "Shows a user's cards");
+                        if (db.AuthorizeToken())
+                        {
+                            string? res = db.GetCards();
+
+                            if(res != null)
+                            {
+                                SendResponse(socket, 200, "OK", res);
+                            }
+                            else
+                            {
+                                SendResponse(socket, 204, "No content", "User has no cards");
+                            }
+                        }
+                        else
+                        {
+                            SendUnauthorizedError(socket);
+                        }
+                        
                     }
                     else if (strParams[0] == "deck")
                     {
-                        SendResponse(socket, 200, "OK", "Shows the user's currently configured deck");
+                        if (db.AuthorizeToken())
+                        {
+                            string? res;
+                            if(strParams.Length > 1)
+                            {
+                                if (strParams[1] == "format=plain")
+                                {
+                                    res = db.GetDeck("plain");
+                                }
+                                else
+                                {
+                                    res = db.GetDeck();
+                                }
+                            }
+                            else
+                            {
+                                res = db.GetDeck();
+                            }
+
+                            if(res != null)
+                            {
+                                if(strParams.Length > 1)
+                                {
+                                    if (strParams[1] == "format=plain")
+                                    {
+                                        SendResponse(socket, 200, "OK", res, "text/plain");
+                                    }
+                                    else
+                                    {
+                                        SendResponse(socket, 200, "OK", res);
+                                    }
+                                }
+                                else
+                                {
+                                    SendResponse(socket, 200, "OK", res);
+                                }
+                            }
+                            else
+                            {
+                                SendResponse(socket, 204, "No content", "The request was fine, but the deck doesn't have any cards");
+                            }
+                        }
+                        else
+                        {
+                            SendUnauthorizedError(socket);
+                        }
                     }
                     else if (strParams[0] == "stats")
                     {
@@ -101,20 +155,10 @@ namespace MTCG.BL.Http
                     {
                         //Register a new user
                         //TODO: Add JSONSchemas for RequestBodys und ResponseBodys
-                        JObject body = JObject.Parse(request.RequestBodyString);
-
-                        if (body.IsValid(UserCredentialsSchema))
-                        {
-                            Console.WriteLine("Correct BODY");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Incorrect Body");
-                        }
                         
-                        if (request.Params.ContainsKey("username") && request.Params.ContainsKey("password"))
+                        if (request.Params.ContainsKey("Username") && request.Params.ContainsKey("Password"))
                         {
-                            int code = db.RegisterUser(request.Params["username"], request.Params["password"]);
+                            int code = db.RegisterUser(request.Params["Username"], request.Params["Password"]);
                             if (code == 0)
                             {
                                 SendResponse(socket, 201, "OK", "User successfully created");
@@ -127,7 +171,6 @@ namespace MTCG.BL.Http
                             {
                                 SendBadRequest(socket);
                             }
-
                         }
                         else
                         {
@@ -136,9 +179,9 @@ namespace MTCG.BL.Http
                     }
                     else if (strParams[0] == "sessions")
                     {
-                        if (request.Params.ContainsKey("username") && request.Params.ContainsKey("password"))
+                        if (request.Params.ContainsKey("Username") && request.Params.ContainsKey("Password"))
                         {
-                            string authToken = db.LoginUser(request.Params["username"], request.Params["password"]);
+                            string? authToken = db.LoginUser(request.Params["Username"], request.Params["Password"]);
                             if (authToken != null)
                             {
                                 SendResponse(socket, 200, "OK", "{\"authToken\":\"" + authToken.ToString() + "\"}");
@@ -166,22 +209,22 @@ namespace MTCG.BL.Http
                     }
                     else if (strParams[0] == "battles")
                     {
-                        SendResponse(socket, 200, "OK", "Enters the lobby to start a battle");
-                        User user1 = new User(new UserCredentials("Simon", "Hallo"));
-                        User user2 = new User(new UserCredentials("Max", "Hallo"));
-                        Card[] cards = new Card[4];
-
-                        cards[0] = new MonsterCard(35, ElementType.Fire, CardType.Ork);
-                        cards[1] = new SpellCard(30, ElementType.Water);
-                        cards[2] = new MonsterCard(15, ElementType.Normal, CardType.Knight);
-                        cards[3] = new MonsterCard(30, ElementType.Normal, CardType.Dragon);
-
-                        user1.ChooseDeck(cards);
-                        user2.ChooseDeck(cards);
-
-                        Battle battle = new Battle(user1, user2);
-                        battle.executeBattle();
-
+                        if (db.AuthorizeToken())
+                        {
+                            List<Card>? deck = db.GetDeckAsList();
+                            if(deck != null)
+                            {
+                                BattleLobby.Instance.EnterLobby(new Player(deck));
+                            }
+                            else
+                            {
+                                SendBadRequest(socket, "User has no active deck");
+                            }
+                        }
+                        else
+                        {
+                            SendUnauthorizedError(socket);
+                        }
                     }
                     else if (strParams[0] == "tradings")
                     {
@@ -202,11 +245,64 @@ namespace MTCG.BL.Http
 
                     if (strParams[0] == "users")
                     {
-                        SendResponse(socket, 200, "OK", "Updates the user data for the given username.");
+                        if (strParams.Length > 1)
+                        {
+                            if (db.AuthorizeToken())
+                            {
+                                if (request.Params.ContainsKey("Name") && request.Params.ContainsKey("Bio") && request.Params.ContainsKey("Image"))
+                                {
+
+                                    int code = db.UpdateUserData(strParams[1], request.Params["Name"], request.Params["Bio"], request.Params["Image"]);
+                                    if (code == 0)
+                                    {
+                                        SendResponse(socket, 200, "OK", "User succesfully updated.");
+                                    }
+                                    else if(code == 1)
+                                    {
+                                        SendResponse(socket, 404, "Not found", "User not found.");
+                                    }
+                                    else
+                                    {
+                                        SendBadRequest(socket);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                SendUnauthorizedError(socket);
+                            }
+                        }
+                        
                     }
                     else if (strParams[0] == "deck")
                     {
-                        SendResponse(socket, 200, "OK", "Configures the deck with four provided cards");
+                        if (db.AuthorizeToken())
+                        {
+                            if(request.Params.Count == 4 && request.Params.ContainsKey("card1") && request.Params.ContainsKey("card2") && request.Params.ContainsKey("card3") && request.Params.ContainsKey("card4"))
+                            {
+                                List<string> cards = new List<string>();
+                                cards.Add(request.Params["card1"]);
+                                cards.Add(request.Params["card2"]);
+                                cards.Add(request.Params["card3"]);
+                                cards.Add(request.Params["card4"]);
+                                if (db.ConfigureDeck(cards))
+                                {
+                                    SendResponse(socket, 200, "OK", "The deck has been successfully configured");
+                                }
+                                else
+                                {
+                                    SendResponse(socket, 403, "Forbidden", "At least one of the provided cards does not belong to the user or is not available.");
+                                }
+                            }
+                            else
+                            {
+                                SendBadRequest(socket, "The provided deck did not include the required amount of cards");
+                            }
+                        }
+                        else
+                        {
+                            SendUnauthorizedError(socket);
+                        }
                     }
                 }
 
@@ -230,16 +326,20 @@ namespace MTCG.BL.Http
             catch(HttpRequestException ex)
             {
                 SendBadRequest(socket, ex.Message);
+            }catch(PostgresException ex)
+            {
+                SendBadRequest(socket, ex.Message);
             }
         }
 
-        public void SendResponse(TcpClient socket, int code, string codeText, string responseBody)
+        public void SendResponse(TcpClient socket, int code, string codeText, string responseBody, string contentType = "application/json")
         {
             StreamWriter writer = new StreamWriter(socket.GetStream()) { AutoFlush = true };
             HttpResponse response = new HttpResponse(socket, writer);
             response.ResponseCode = code;
             response.ResponseCodeText = codeText;
             response.ResponseBody = responseBody;
+            response.ContentType = contentType;
 
             response.Send();
             writer.Close();

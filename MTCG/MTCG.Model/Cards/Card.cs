@@ -1,4 +1,7 @@
-﻿namespace MTCG.Model.Cards
+﻿using Newtonsoft.Json.Converters;
+using System.Text.Json.Serialization;
+
+namespace MTCG.Model.Cards
 {
 
     public enum ElementType
@@ -23,12 +26,14 @@
 
     public abstract class Card
     {
-        protected float damage;
+        protected double damage;
         protected ElementType element;
         protected CardType type;
 
-        public float Damage { get { return damage; } }
+        public double Damage { get { return damage; } }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ElementType Element { get { return element; } }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public CardType Type { get { return type; } }
 
         public abstract bool isImmuneToMonster(CardType opponentType);

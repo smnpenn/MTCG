@@ -49,9 +49,9 @@ namespace MTCG.Model.Users
 
         public User(UserCredentials credentials, UserData data, UserStats stats)
         {
-            this.Credentials = credentials;
-            this.Data = data;
-            this.Stats = stats;
+            Credentials = credentials;
+            Data = data;
+            Stats = stats;
             Deck = new List<Card>();
             Stack = new List<Card>();
         }
@@ -72,52 +72,6 @@ namespace MTCG.Model.Users
 
             Deck = new List<Card>();
             Stack = new List<Card>();
-        }
-
-        public void AddCardToStack(Card card)
-        {
-            if (card != null)
-                Stack.Add(card);
-        }
-
-        //TODO: Check if cards in stack, check if no duplicates
-        public bool ChooseDeck(Card[] cards)
-        {
-
-            for (int i = 0; i < 4; ++i)
-            {
-                if (cards[i] != null)
-                {
-                    Deck.Add(cards[i]);
-                }
-                else
-                {
-                    Console.WriteLine("ERROR while picking deck");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        public void AddCardToDeck(Card card)
-        {
-            if (card != null)
-                Deck.Add(card);
-            else
-                Console.WriteLine("ERROR while adding card to deck");
-        }
-
-        public void RemoveCardFromDeck(Card card)
-        {
-            if (Deck.Contains(card))
-            {
-                Deck.Remove(card);
-            }
-            else
-            {
-                Console.WriteLine("ERROR while removing card from deck");
-            }
         }
     }
 }

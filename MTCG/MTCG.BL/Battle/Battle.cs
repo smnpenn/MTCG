@@ -4,15 +4,15 @@ using System.Reflection.Metadata;
 using MTCG.Model.Cards;
 using MTCG.Model.Users;
 
-namespace MTCG.BL
+namespace MTCG.BL.Battle
 {
     public class Battle
     {
-        User player1;
-        User player2;
+        Player player1;
+        Player player2;
         Random random = new Random();
 
-        public Battle(User player1, User player2)
+        public Battle(Player player1, Player player2)
         {
             this.player1 = player1;
             this.player2 = player2;
@@ -21,18 +21,19 @@ namespace MTCG.BL
         public void executeBattle()
         {
             int count = 0;
-            while(player1.Deck.Count != 0 && player2.Deck.Count != 0 && count < 100)
+            while (player1.Deck.Count != 0 && player2.Deck.Count != 0 && count < 100)
             {
                 Card card1 = player1.Deck[random.Next(0, player1.Deck.Count)];
                 Card card2 = player2.Deck[random.Next(0, player2.Deck.Count)];
                 int result = compareCards(card1, card2);
 
-                if(result == 1)
+                if (result == 1)
                 {
                     Console.WriteLine("Card 1 Wins!");
                     player2.RemoveCardFromDeck(card2);
                     player1.AddCardToDeck(card2);
-                }else if(result == 2)
+                }
+                else if (result == 2)
                 {
                     player1.RemoveCardFromDeck(card1);
                     player2.AddCardToDeck(card1);

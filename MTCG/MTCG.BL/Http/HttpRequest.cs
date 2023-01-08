@@ -31,7 +31,8 @@ namespace MTCG.BL.Http
         {
             get
             {
-                return Url.Split("/").Skip(1).ToArray();
+                Char[] delimiters = {'/', '?'};
+                return Url.Split(delimiters).Skip(1).ToArray();
             }
         }
 
@@ -66,6 +67,7 @@ namespace MTCG.BL.Http
             Url = httpParts[1];
 
             Headers = new Dictionary<string, string>();
+            Params = new Dictionary<string, string>();
             while ((line = reader.ReadLine()) != "")
             {
                 string[] parts = line.Split(": ");
@@ -97,10 +99,9 @@ namespace MTCG.BL.Http
                     }
                 }
                 RequestBodyString = data.ToString();
-                Params = new Dictionary<string, string>();
                 try
                 {
-                    Params = JsonConvert.DeserializeObject<Dictionary<string, string>>(data.ToString());
+                    Params = JsonConvert.DeserializeObject<Dictionary<string, string>>(RequestBodyString);
                 }
                 catch (JsonReaderException)
                 {
