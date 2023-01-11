@@ -76,6 +76,7 @@ namespace MTCG.DAL
 
         public UserData? GetUserByID(string username)
         {
+            //Connect();
             lock (padlock)
             {
                 if (connection != null)
@@ -478,6 +479,8 @@ namespace MTCG.DAL
                         }
                     }
 
+                    dr2.Close();
+
                     if (cards.Count > 0)
                     {
                         return cards;
@@ -512,6 +515,8 @@ namespace MTCG.DAL
                 }
             }
 
+            dr.Close();
+
             if (cards.Count > 0)
             {
                 string json = System.Text.Json.JsonSerializer.Serialize(new
@@ -542,6 +547,7 @@ namespace MTCG.DAL
                     cards.Add(new MonsterCard((double)dr[2], element, type));
                 }
             }
+            dr.Close();
 
             if (cards.Count > 0)
             {
@@ -578,28 +584,31 @@ namespace MTCG.DAL
 
         public bool AuthorizeToken()
         {
-            if (Token == null)
+            lock (padlock)
             {
-                return false;
-            }
-            //TODO: Introduce admin user
-            NpgsqlCommand cmd = new NpgsqlCommand("SELECT username FROM mtcg.\"UserCredentials\" WHERE token = @p1;", connection);
-            cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
-            cmd.Prepare();
-            cmd.Parameters["p1"].Value = Token;
+                if (Token == null)
+                {
+                    return false;
+                }
+                //TODO: Introduce admin user
+                NpgsqlCommand cmd = new NpgsqlCommand("SELECT username FROM mtcg.\"UserCredentials\" WHERE token = @p1;", connection);
+                cmd.Parameters.Add(new NpgsqlParameter("p1", DbType.String));
+                cmd.Prepare();
+                cmd.Parameters["p1"].Value = Token;
 
-            NpgsqlDataReader dr = cmd.ExecuteReader();
-            if (dr.Read())
-            {
-                AuthorizedUser = (string)dr[0];
-                dr.Close();
-                return true;
-            }
-            else
-            {
-                AuthorizedUser = null;
-                dr.Close();
-                return false;
+                NpgsqlDataReader dr = cmd.ExecuteReader();
+                if (dr.Read())
+                {
+                    AuthorizedUser = (string)dr[0];
+                    dr.Close();
+                    return true;
+                }
+                else
+                {
+                    AuthorizedUser = null;
+                    dr.Close();
+                    return false;
+                }
             }
         }
 

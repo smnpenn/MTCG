@@ -15,9 +15,16 @@ namespace MTCG.Model.Users
             private set;
         }
 
-        public Player(List<Card> deck)
+        public string Name
+        {
+            get;
+            private set;
+        }
+
+        public Player(List<Card> deck, string name)
         {
             Deck = deck;
+            Name = name;
         }
 
         public void AddCardToDeck(Card card)

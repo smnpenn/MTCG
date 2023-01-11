@@ -214,7 +214,16 @@ namespace MTCG.BL.Http
                             List<Card>? deck = db.GetDeckAsList();
                             if(deck != null)
                             {
-                                BattleLobby.Instance.EnterLobby(new Player(deck));
+                                string? res = BattleLobby.Instance.EnterLobby(new Player(deck, db.AuthorizedUser));
+
+                                if(res != null)
+                                {
+                                    SendResponse(socket, 200, "OK", res, "text/plain");
+                                }
+                                else
+                                {
+                                    SendBadRequest(socket);
+                                }
                             }
                             else
                             {

@@ -34,8 +34,12 @@ namespace MTCG.BL.Battle
 
         }
 
-        public void EnterLobby(Player player)
+        public string? EnterLobby(Player player)
         {
+            if(player == null)
+            {
+                return null;
+            }
             players.Add(player);
 
             while(true)
@@ -44,9 +48,12 @@ namespace MTCG.BL.Battle
                 {
                     battle = new Battle(players[0], players[1]);
                     battle.executeBattle();
-                    return;
+                    Console.WriteLine(battle.Log);
+                    break;
                 }
             }
+            players = new List<Player>();
+            return battle.Log;
         }
     }
 }
